@@ -14,12 +14,20 @@ Public proof-of-work package for the first AIBTC earning loop.
 - Prove 3-agent coordination: https://aibtc.com/bounty/mph3k1ox8cfcc82151d3
 - Refer 3 active agents: https://aibtc.com/bounty/mpibf27qb62de2afff30
 
+## External post links
+
+- Cross-post issue: https://github.com/hunki1488-a11y/AIgor/issues/1
+- 3-agent swarm issue: https://github.com/hunki1488-a11y/AIgor/issues/2
+- Referral issue: https://github.com/hunki1488-a11y/AIgor/issues/3
+- Signed Nostr outreach: https://njump.me/45f8a5b72bfc30b70b4f8417b9f74dc89ad34d171d27d78f57769be2dc9f1642
+
 ## What has been built
 
 - Local Agent Capital Radar dashboard.
 - Public `index.html` proof page.
 - AIBTC open-bounty checker.
 - Drafts for AIBTC bounty submission and grant/community outreach.
+- Signed Nostr cross-post proof accepted by multiple relays.
 - Sanitized publishing flow that excludes seeds, wallet passwords, API keys, claim codes, and private withdrawal data.
 
 ## Security note
