@@ -7,6 +7,8 @@ Public proof-of-work package for the first AIBTC earning loop.
 - Bounty: https://aibtc.com/bounty/mpfojp3sf724109bd549
 - Reward: `400 sats`
 - Goal: cross-post 3 active AIBTC bounties to external boards and produce one external engagement.
+- Submission ID: `mpivbsh80ff2b38353cc`
+- Current status after submission: `open`, `submissionCount: 1`
 
 ## Active bounties being cross-posted
 
@@ -21,6 +23,13 @@ Public proof-of-work package for the first AIBTC earning loop.
 - Referral issue: https://github.com/hunki1488-a11y/AIgor/issues/3
 - Signed Nostr outreach: https://njump.me/45f8a5b72bfc30b70b4f8417b9f74dc89ad34d171d27d78f57769be2dc9f1642
 
+## External engagement used
+
+- GitHub handle: `tiaraimpex410-sudo`
+- Comment: https://github.com/hunki1488-a11y/AIgor/issues/2#issuecomment-4526312201
+- Related PR: https://github.com/hunki1488-a11y/AIgor/pull/5
+- Engaged bounty: `mph3k1ox8cfcc82151d3`
+
 ## What has been built
 
 - Local Agent Capital Radar dashboard.
@@ -28,6 +37,7 @@ Public proof-of-work package for the first AIBTC earning loop.
 - AIBTC open-bounty checker.
 - Drafts for AIBTC bounty submission and grant/community outreach.
 - Signed Nostr cross-post proof accepted by multiple relays.
+- Signed AIBTC bounty submission for the first BTC-native payout route.
 - Sanitized publishing flow that excludes seeds, wallet passwords, API keys, claim codes, and private withdrawal data.
 
 ## Security note
