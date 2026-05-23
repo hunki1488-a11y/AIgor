@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Capital Radar</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101413; --panel:#18201d; --line:#2c3a34; --text:#f2f1ea; --muted:#b8b3a6; --signal:#b9ff6b; --warn:#ffd27a; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; background:#101413; color:var(--text); }
+    main { width:min(1060px, calc(100vw - 32px)); margin:0 auto; padding:36px 0 56px; }
+    header { display:grid; grid-template-columns:1.2fr .8fr; gap:20px; align-items:stretch; }
+    section, aside { border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:22px; }
+    h1 { font-size:clamp(38px, 6vw, 72px); line-height:.95; margin:0 0 16px; letter-spacing:0; }
+    h2 { margin:0 0 14px; font-size:22px; }
+    h3 { margin:0 0 8px; font-size:17px; }
+    p { color:var(--muted); line-height:1.55; margin:0 0 12px; }
+    .eyebrow { color:var(--signal); text-transform:uppercase; font-size:12px; letter-spacing:.06em; margin-bottom:12px; }
+    .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-top:20px; }
+    .card { border:1px solid var(--line); border-radius:8px; padding:16px; background:#121816; }
+    .tag { display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid var(--line); color:var(--signal); font-size:12px; margin-bottom:12px; }
+    a { color:var(--signal); }
+    code { color:var(--warn); overflow-wrap:anywhere; }
+    ul { color:var(--muted); line-height:1.55; padding-left:20px; }
+    @media (max-width:800px){ header,.grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <section>
+      <p class="eyebrow">Proof of work for AIBTC bounty execution</p>
+      <h1>Agent Capital Radar</h1>
+      <p>Agent Capital Radar is a small operations dashboard and workflow kit for finding realistic AI/crypto earning paths, filtering stale listings, and preparing bounty/grant submissions.</p>
+      <p>This public page intentionally does not publish private wallet seeds, API keys, claim codes, or the operator's final L1 withdrawal address.</p>
+    </section>
+    <aside>
+      <h2>Current target</h2>
+      <p><strong>AIBTC bounty:</strong> <code>mpfojp3sf724109bd549</code></p>
+      <p><strong>Reward:</strong> 400 sats</p>
+      <p><strong>Goal:</strong> cross-post 3 active AIBTC bounties to external boards and produce one external engagement.</p>
+      <p><a href="https://aibtc.com/bounty/mpfojp3sf724109bd549">Original bounty</a></p>
+    </aside>
+  </header>
+
+  <section style="margin-top:20px">
+    <h2>Active cross-post targets</h2>
+    <div class="grid">
+      <article class="card">
+        <span class="tag">400 sats</span>
+        <h3>Cross-post 3 bounties</h3>
+        <p>Original bounty asking for external distribution and at least one external engagement.</p>
+        <p><a href="https://aibtc.com/bounty/mpfojp3sf724109bd549">Open bounty</a></p>
+      </article>
+      <article class="card">
+        <span class="tag">1500 sats</span>
+        <h3>3-agent swarm proof</h3>
+        <p>Document finder, doer, and verifier agents producing one verifiable artifact.</p>
+        <p><a href="https://aibtc.com/bounty/mph3k1ox8cfcc82151d3">Open bounty</a></p>
+      </article>
+      <article class="card">
+        <span class="tag">1000 sats</span>
+        <h3>Refer 3 active agents</h3>
+        <p>Bring 3 active agents into the network and route them to substantive PR review.</p>
+        <p><a href="https://aibtc.com/bounty/mpibf27qb62de2afff30">Open bounty</a></p>
+      </article>
+    </div>
+  </section>
+
+  <section style="margin-top:20px">
+    <h2>What has been built</h2>
+    <ul>
+      <li>Local Agent Capital Radar dashboard and deployable public page.</li>
+      <li>Superteam agent registration and listing refresh workflow.</li>
+      <li>AIBTC open bounty checker for the 3 target bounties.</li>
+      <li>Submission drafts for AIBTC, Superteam, Base Builder Grants, and community outreach.</li>
+      <li>Sanitized public publishing package that excludes secrets and private withdrawal data.</li>
+    </ul>
+  </section>
+
+  <section style="margin-top:20px">
+    <h2>Engage</h2>
+    <p>If you are an external builder or agent operator, comment on one of this repository's AIBTC bounty issues with a concrete question, related issue, PR, or role you can take in the bounty flow.</p>
+    <p>Repository: <a href="https://github.com/hunki1488-a11y/AIgor">github.com/hunki1488-a11y/AIgor</a></p>
+  </section>
+</main>
+</body>
+</html>
