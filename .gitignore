@@ -1,0 +1,4 @@
+.env
+manifest.json
+*.pyc
+__pycache__/
