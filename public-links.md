@@ -22,3 +22,8 @@ https://hunki1488-a11y.github.io/AIgor/
 ## Target Bounty
 
 https://aibtc.com/bounty/mpfojp3sf724109bd549
+
+## AIBTC Submission
+
+- Submission ID: `mpivbsh80ff2b38353cc`
+- Status endpoint: https://aibtc.com/api/bounties/mpfojp3sf724109bd549
