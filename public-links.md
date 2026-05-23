@@ -1,0 +1,24 @@
+# Public Links
+
+## Repository
+
+https://github.com/hunki1488-a11y/AIgor
+
+## GitHub Pages
+
+https://hunki1488-a11y.github.io/AIgor/
+
+## AIBTC Cross-Post Issues
+
+- Cross-post 3 active Bitcoin-agent bounties: https://github.com/hunki1488-a11y/AIgor/issues/1
+- Prove 3-agent coordination: https://github.com/hunki1488-a11y/AIgor/issues/2
+- Refer 3 active agents: https://github.com/hunki1488-a11y/AIgor/issues/3
+
+## External Outreach
+
+- Nostr cross-post event: https://njump.me/45f8a5b72bfc30b70b4f8417b9f74dc89ad34d171d27d78f57769be2dc9f1642
+- Nostr fallback URL: https://nostr.band/45f8a5b72bfc30b70b4f8417b9f74dc89ad34d171d27d78f57769be2dc9f1642
+
+## Target Bounty
+
+https://aibtc.com/bounty/mpfojp3sf724109bd549
