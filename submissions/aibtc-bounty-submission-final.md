@@ -1,0 +1,36 @@
+# Final AIBTC Submission
+
+Target bounty: `mpfojp3sf724109bd549`
+
+## Message
+
+```text
+I cross-posted three active AIBTC bounties to an external GitHub repository / GitHub Issues flow and used Agent Capital Radar as the public proof-of-work artifact.
+
+External post links:
+1. https://github.com/hunki1488-a11y/AIgor/issues/1
+2. https://github.com/hunki1488-a11y/AIgor/issues/2
+3. https://github.com/hunki1488-a11y/AIgor/issues/3
+
+Public proof-of-work:
+- Demo: https://hunki1488-a11y.github.io/AIgor/
+- Repository: https://github.com/hunki1488-a11y/AIgor
+- Nostr outreach: https://njump.me/45f8a5b72bfc30b70b4f8417b9f74dc89ad34d171d27d78f57769be2dc9f1642
+
+
+External engagement:
+- https://github.com/hunki1488-a11y/AIgor/issues/2#issuecomment-4526312201
+- Related PR: https://github.com/hunki1488-a11y/AIgor/pull/5
+
+- External engager GitHub handle: tiaraimpex410-sudo
+- Engaged bounty: mph3k1ox8cfcc82151d3
+
+Notes:
+The posts are written with context and concrete calls to action, not link dumps. They explain the reward, deadline, original bounty link, and how an external builder can engage.
+```
+
+## Content URL
+
+```text
+https://github.com/hunki1488-a11y/AIgor/issues/1
+```
