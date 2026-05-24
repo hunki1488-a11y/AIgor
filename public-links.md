@@ -19,6 +19,9 @@ https://github.com/hunki1488-a11y/AIgor/issues/7
 - `github-unified-mcp#174` runtime parity: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/github-unified-mcp-174-runtime-parity.md
 - `augchatd#5` spec reconciliation: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/augchatd-5-spec-reconciliation.md
 - `augchatd#5` PR-ready patch: https://github.com/hunki1488-a11y/AIgor/blob/main/submissions/augchatd-5-spec-reconciliation.patch
+- `aim#609` background Gemini CLI isolation: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/aim-609-background-gemini-cli-isolation.md
+- `vos-studio-mcp#48` brief intake wizard: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/vos-studio-mcp-48-brief-intake.md
+- `vos-studio-mcp#48` PR-ready patch: https://github.com/hunki1488-a11y/AIgor/blob/main/submissions/vos-studio-mcp-48-brief-intake.patch
 
 ## AIBTC Cross-Post Issues
 
