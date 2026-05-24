@@ -1,0 +1,105 @@
+diff --git a/spec/src/behavior/contracts/demo-mode.md b/spec/src/behavior/contracts/demo-mode.md
+index cc4a7c7..9edc47f 100644
+--- a/spec/src/behavior/contracts/demo-mode.md
++++ b/spec/src/behavior/contracts/demo-mode.md
+@@ -23,8 +23,11 @@ When `AUGCHATD_MODE=demo` is set at boot, augchatd:
+ 2. **Does not accept `POST /sessions` or `DELETE /sessions/:id`** — both return `404`. The demo session is bound **at process boot from environment variables**, not minted per request, and demo has no integrator authority to forcibly delete (no mTLS). The integrator-facing surface is closed in demo mode.
+ 3. Loads a **single fixed session** from environment variables:
+    - `DEMO_MODEL_PROVIDER`, `DEMO_MODEL_ID`, `DEMO_MODEL_API_KEY`, `DEMO_SYSTEM_PROMPT` — required for the model.
++   - `DEMO_THEME` — optional bundled-UI theme state for the local demo shell. When unset, the UI uses its default theme.
+    - `DEMO_CONNECTORS` (a JSON string) **or** `DEMO_CONNECTORS_FILE` (a filesystem path to a JSON file with the same shape) — optional. Same shape as the production session payload's `connectors[]`. Absent ⇒ no connectors (plain chat). The file variant is recommended whenever the JSON carries credentials (env vars leak to shell history, process listings, and committed compose files). **The file is read exactly once at boot** and held in memory; subsequent file-system changes do not affect the running process.
+    - `DEMO_S3_URI` — optional, the cold-storage bucket (same format as the production `storage.s3` field). Absent ⇒ hot storage only; conversations live for the lifetime of the process and are lost on restart. Acceptable for local demos.
++   - `AUGCHATD_DATA_DIR` — optional local data directory for demo hot storage and runtime state. When unset, augchatd uses its default local data path.
++   - `AUGCHATD_TRACE_DIR` — optional directory for operator-local JSONL debug traces in demo/development runs. This is not a distributed tracing backend, metrics endpoint, or audit log.
+ 4. Serves a **`GET /demo/jwt`** endpoint (no auth) that returns a JWT for that fixed session.
+ 5. Serves the bundled UI on the same port; the UI fetches the JWT from `GET /demo/jwt` instead of receiving it via `postMessage` from an integrator.
+ 6. Behaves identically to production mode from the chat path onward — same tool-use loop, same connector dispatch, same storage rules.
+@@ -57,5 +60,8 @@ When `AUGCHATD_MODE=demo` is set at boot, augchatd:
+ - `DEMO_CONNECTORS_FILE` pointing to a readable JSON file → same as above; the file's content is the array.
+ - Both `DEMO_CONNECTORS` and `DEMO_CONNECTORS_FILE` set → process fails to boot with a clear error (no precedence; integrator must pick one).
+ - Either variant malformed → process fails to boot with a clear error (no silent fallback to no-connectors).
++- `DEMO_THEME` set → `GET /demo/jwt` returns the boot-time theme state alongside the JWT so the bundled UI can initialize consistently.
++- `AUGCHATD_DATA_DIR` set → demo runtime state is written under that directory, not an implicit process working directory.
++- `AUGCHATD_TRACE_DIR` set → local JSONL debug traces are written there without enabling metrics, distributed tracing, or an audit log surface.
+ - `DEMO_S3_URI` absent → boot succeeds; the flush path is disabled and conversation history is hot-only for the lifetime of the process.
+ - Graduation: same binary boots production by setting different env / running mTLS — no separate build.
+diff --git a/spec/src/constraints/observability.md b/spec/src/constraints/observability.md
+index 3ad510d..320b4f0 100644
+--- a/spec/src/constraints/observability.md
++++ b/spec/src/constraints/observability.md
+@@ -23,5 +23,16 @@ evidence:
+ 
+ These are deliberately out of scope. Integrators that need them wire their own collectors or run augchatd behind a proxy that emits them.
+ 
++## Operator-local debug traces
++
++`AUGCHATD_TRACE_DIR` may enable local JSONL debug traces for demo and development runs. This remains inside the operator's filesystem and does not change the observability boundary above:
++
++- no network exporter is started;
++- no Prometheus or metrics endpoint is exposed;
++- no distributed trace context is propagated;
++- no compliance-grade audit log is promised.
++
++The trace directory is therefore a debugging aid, not an observability product surface.
++
+ > [!NOTE] Assumption
+ > The README states "Logs go to stderr; wire your own collector" but does not specify a log format. Until code lands, the format is an evidence gap. Default expectation: structured (JSON) lines, but unconfirmed.
+diff --git a/spec/src/contracts/http-get-demo-jwt.md b/spec/src/contracts/http-get-demo-jwt.md
+index 92db4e0..f338095 100644
+--- a/spec/src/contracts/http-get-demo-jwt.md
++++ b/spec/src/contracts/http-get-demo-jwt.md
+@@ -30,11 +30,16 @@ None. (Demo mode bypasses mTLS by design.)
+ `Content-Type: application/json`
+ 
+ ```json
+-{ "jwt": "eyJ..." }
++{
++  "jwt": "eyJ...",
++  "theme": {
++    "mode": "light"
++  }
++}
+ ```
+ 
+ > [!NOTE] Assumption
+-> The README shows the bundled UI fetches a JWT from `GET /demo/jwt` in demo mode, but does not show the exact response shape. The shape above is assumed minimal; will be confirmed when code lands.
++> The issue queue states that the demo JWT response now carries theme state. The exact theme object is still pending implementation evidence; the shape above records the expected contract without constraining the internal UI theme model beyond JSON-serializable state.
+ 
+ ## Related
+ 
+diff --git a/spec/views/user-stories/0007-local-demo-mode.md b/spec/views/user-stories/0007-local-demo-mode.md
+index 7d7718e..cacf6da 100644
+--- a/spec/views/user-stories/0007-local-demo-mode.md
++++ b/spec/views/user-stories/0007-local-demo-mode.md
+@@ -25,11 +25,12 @@ Given I have docker installed
+           -e DEMO_MODEL_ID=claude-opus-4-7 \
+           -e DEMO_MODEL_API_KEY=sk-ant-... \
+           -e DEMO_SYSTEM_PROMPT="You are a helpful assistant." \
++          -e DEMO_THEME='{"mode":"light"}' \
+           augchatd/augchatd
+   And I open http://localhost:8080
+  Then the bundled UI loads
+   And the UI shows a visible "Demo session — not authenticated" banner
+-  And it fetches a JWT from GET /demo/jwt
++  And it fetches a JWT plus theme state from GET /demo/jwt
+   And I can chat with the configured model
+ ```
+ 
+@@ -65,6 +66,17 @@ Given I want to try the demo with a knowledge base attached
+   And I can toggle it off via the UI to test the toggle flow
+ ```
+ 
++## Scenario — demo runtime state and local traces
++
++```
++Given I want deterministic demo files and local debug traces
++ When I set AUGCHATD_DATA_DIR=/tmp/augchatd-data
++  And I set AUGCHATD_TRACE_DIR=/tmp/augchatd-traces
++ Then demo runtime state is written under /tmp/augchatd-data
++  And local JSONL debug traces are written under /tmp/augchatd-traces
++  And no metrics endpoint, distributed tracing backend, or audit-log surface is enabled
++```
++
+ ## Why this matters
+ 
+ The two-mode design lets evaluation cost stay low without splitting the chat code path or shipping a separate artifact.
