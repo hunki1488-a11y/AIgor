@@ -1,0 +1,107 @@
+diff --git a/aim_core/reasoning_utils.py b/aim_core/reasoning_utils.py
+index de9d9dc..909b8d6 100755
+--- a/aim_core/reasoning_utils.py
++++ b/aim_core/reasoning_utils.py
+@@ -5,6 +5,7 @@ import sys
+ import subprocess
+ import requests
+ import keyring
++import tempfile
+ 
+ # --- CONFIG BOOTSTRAP ---
+ def find_aim_root():
+@@ -17,6 +18,8 @@ def find_aim_root():
+ AIM_ROOT = find_aim_root()
+ CONFIG_PATH = os.path.join(AIM_ROOT, "core/CONFIG.json")
+ 
++BACKGROUND_CLI_HOME = os.path.join(tempfile.gettempdir(), "aim_background_cli_home")
++
+ def load_config():
+     if not os.path.exists(CONFIG_PATH): return {}
+     try:
+@@ -74,17 +77,19 @@ def execute_google(prompt, system_instruction, model, auth_type="API Key", timeo
+         # Route 1: Native Gemini CLI Bridge (Bypasses all REST API constraints)
+         full_prompt = f"{system_instruction}\n\nCONTEXT:\n{prompt}"
+         
+-        # PHASE 32 PROTECTION: Use separate tmp and config dirs for background tasks
+-        # to avoid recursion loops and session pollution.
++        # PHASE 32 PROTECTION: Use a separate Gemini CLI home for background
++        # tasks so daemon summarization cannot pollute the operator's primary
++        # ~/.gemini session history.
+         env = os.environ.copy()
+         
+         # Always disable user hooks and checkpoints for generate_reasoning calls
+         # because this is an internal API wrapper, not a primary user session.
+-        bg_tmp = "/tmp/aim_background_sessions"
+-        bg_config = "/tmp/aim_background_config"
+-        os.makedirs(bg_tmp, exist_ok=True)
+-        env["GEMINI_CLI_TMP_DIR"] = bg_tmp
+-        env["GEMINI_CLI_DISABLE_CHECKPOINT"] = "true"
++        background_gemini_dir = os.path.join(BACKGROUND_CLI_HOME, ".gemini")
++        os.makedirs(background_gemini_dir, exist_ok=True)
++        env["GEMINI_CLI_HOME"] = BACKGROUND_CLI_HOME
++        env["GEMINI_CLI_TRUST_WORKSPACE"] = "true"
++        env["GEMINI_CLI_SURFACE"] = "aim-background-reasoning"
++        env["GEMINI_CLI_TRUSTED_FOLDERS_PATH"] = os.path.join(background_gemini_dir, "trustedFolders.json")
+         env["AIM_INTERNAL_REASONING"] = "1"
+ 
+         # Increase timeout for Pro models
+diff --git a/tests/test_reasoning_utils_background_cli.py b/tests/test_reasoning_utils_background_cli.py
+new file mode 100644
+index 0000000..7984079
+--- /dev/null
++++ b/tests/test_reasoning_utils_background_cli.py
+@@ -0,0 +1,53 @@
++import importlib
++import os
++import subprocess
++import sys
++import types
++import unittest
++from unittest.mock import patch
++
++current_dir = os.path.dirname(os.path.abspath(__file__))
++aim_root = os.path.dirname(current_dir)
++sys.path.append(os.path.join(aim_root, "aim_core"))
++sys.modules.setdefault("requests", types.SimpleNamespace())
++sys.modules.setdefault("keyring", types.SimpleNamespace(get_password=lambda *_args, **_kwargs: None))
++reasoning_utils = importlib.import_module("reasoning_utils")
++
++
++class TestReasoningUtilsBackgroundCli(unittest.TestCase):
++    @patch("reasoning_utils.subprocess.run")
++    def test_oauth_cli_uses_isolated_home_and_headless_trust(self, mock_run):
++        mock_run.return_value = subprocess.CompletedProcess(
++            args=["gemini"],
++            returncode=0,
++            stdout='{"response": "OK"}',
++            stderr="",
++        )
++
++        result = reasoning_utils.execute_google(
++            "prompt",
++            "system",
++            "gemini-3.1-flash-lite-preview",
++            auth_type="OAuth",
++        )
++
++        self.assertEqual(result, "OK")
++
++        _, kwargs = mock_run.call_args
++        env = kwargs["env"]
++
++        self.assertEqual(env["AIM_INTERNAL_REASONING"], "1")
++        self.assertEqual(env["GEMINI_CLI_HOME"], reasoning_utils.BACKGROUND_CLI_HOME)
++        self.assertEqual(env["GEMINI_CLI_TRUST_WORKSPACE"], "true")
++        self.assertEqual(env["GEMINI_CLI_SURFACE"], "aim-background-reasoning")
++        self.assertEqual(
++            env["GEMINI_CLI_TRUSTED_FOLDERS_PATH"],
++            os.path.join(reasoning_utils.BACKGROUND_CLI_HOME, ".gemini", "trustedFolders.json"),
++        )
++        self.assertNotIn("GEMINI_CLI_TMP_DIR", env)
++        self.assertNotIn("GEMINI_CLI_DISABLE_CHECKPOINT", env)
++        self.assertEqual(kwargs["cwd"], os.path.join(reasoning_utils.AIM_ROOT, "memory-wiki"))
++
++
++if __name__ == "__main__":
++    unittest.main()
