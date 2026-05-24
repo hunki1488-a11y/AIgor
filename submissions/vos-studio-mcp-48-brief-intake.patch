@@ -1,0 +1,387 @@
+diff --git a/src/vos_studio_mcp/schemas/brief.py b/src/vos_studio_mcp/schemas/brief.py
+new file mode 100644
+index 0000000..ac90bff
+--- /dev/null
++++ b/src/vos_studio_mcp/schemas/brief.py
+@@ -0,0 +1,41 @@
++"""Creative brief intake schemas."""
++
++from pydantic import BaseModel, Field
++
++
++class BriefIntakeInput(BaseModel):
++    client_id: str = Field(..., description="Client that owns the brief.")
++    raw_brief: str = Field(..., min_length=1, description="Unstructured client brief text.")
++    product_service_description: str = Field(
++        ..., min_length=1, description="Product or service context."
++    )
++    target_audience: str = Field(..., min_length=1)
++    channel_platform: str = Field(..., min_length=1)
++    brand_voice: str | None = None
++    claims: list[str] = Field(default_factory=list)
++    forbidden_topics: list[str] = Field(default_factory=list)
++    compliance_notes: list[str] = Field(default_factory=list)
++
++
++class BriefQuestion(BaseModel):
++    topic: str
++    question: str
++    reason: str
++
++
++class BriefIntakeResponse(BaseModel):
++    status: str
++    campaign_objective: str
++    offer_and_promise: str
++    target_persona: str
++    pain_points: list[str]
++    objections: list[str]
++    creative_angles: list[str]
++    required_assets: list[str]
++    suggested_sprint_type: str
++    provider_suitability_notes: list[str]
++    approval_checklist: list[str]
++    missing_information: list[BriefQuestion]
++    sprint_handoff: dict[str, object]
++    summary: str
++    next_action: str
+diff --git a/src/vos_studio_mcp/services/brief_service.py b/src/vos_studio_mcp/services/brief_service.py
+new file mode 100644
+index 0000000..545b361
+--- /dev/null
++++ b/src/vos_studio_mcp/services/brief_service.py
+@@ -0,0 +1,145 @@
++"""Brief intake service.
++
++Pure deterministic composition: no provider execution and no paid side effects.
++"""
++
++from vos_studio_mcp.auth.guards import assert_owns_client
++from vos_studio_mcp.schemas.brief import BriefIntakeInput, BriefIntakeResponse, BriefQuestion
++from vos_studio_mcp.services.rate_limiter import check_rate_limit
++
++
++def _sentences(text: str, limit: int) -> list[str]:
++    normalized = " ".join(text.replace("\n", " ").split())
++    if not normalized:
++        return []
++    parts = [p.strip(" .") for p in normalized.replace("?", ".").replace("!", ".").split(".")]
++    return [p for p in parts if p][:limit]
++
++
++def _contains_any(text: str, needles: tuple[str, ...]) -> bool:
++    lowered = text.lower()
++    return any(needle in lowered for needle in needles)
++
++
++def _build_missing_information(data: BriefIntakeInput) -> list[BriefQuestion]:
++    questions: list[BriefQuestion] = []
++    brief_text = data.raw_brief.lower()
++    if not _contains_any(brief_text, ("goal", "objective", "kpi", "conversion", "awareness")):
++        questions.append(
++            BriefQuestion(
++                topic="objective",
++                question="Which primary KPI should this creative sprint optimize for?",
++                reason="The raw brief does not name a measurable objective.",
++            )
++        )
++    if not _contains_any(brief_text, ("budget", "deadline", "launch", "timing", "date")):
++        questions.append(
++            BriefQuestion(
++                topic="timing_budget",
++                question="What launch window and budget ceiling should the sprint assume?",
++                reason="Sprint planning needs delivery and spend constraints before execution.",
++            )
++        )
++    if not data.claims and not data.compliance_notes:
++        questions.append(
++            BriefQuestion(
++                topic="claims_compliance",
++                question="Which claims are approved, restricted, or legally sensitive?",
++                reason="Creative outputs need claim boundaries before provider or manual production.",
++            )
++        )
++    return questions
++
++
++def _extract_pain_points(data: BriefIntakeInput) -> list[str]:
++    candidates = _sentences(data.raw_brief, 4)
++    if candidates:
++        return candidates[:3]
++    return [
++        f"{data.target_audience} needs a clearer reason to care about {data.product_service_description}."
++    ]
++
++
++def _build_angles(data: BriefIntakeInput, pain_points: list[str]) -> list[str]:
++    voice = data.brand_voice or "brand-safe"
++    first_pain = pain_points[0] if pain_points else "the core customer problem"
++    return [
++        f"Pain-to-relief angle: show {first_pain} and resolve it with {data.product_service_description}.",
++        f"Proof-first angle: lead with the strongest approved claim for {data.channel_platform}.",
++        f"Objection-handling angle: address why {data.target_audience} may hesitate before buying.",
++        f"Voice-fit angle: express the promise in a {voice} tone without unsupported claims.",
++    ]
++
++
++async def prepare_creative_brief(data: BriefIntakeInput) -> BriefIntakeResponse:
++    """Turn messy client input into a compact sprint-ready creative plan."""
++    assert_owns_client(data.client_id)
++    await check_rate_limit("prepare_creative_brief", data.client_id)
++
++    pain_points = _extract_pain_points(data)
++    objections = [
++        "Unclear value versus current alternatives.",
++        "Low trust in claims unless proof is visible.",
++    ]
++    if data.forbidden_topics:
++        objections.append("Creative must avoid restricted topics and sensitive framing.")
++
++    required_assets = [
++        f"{data.channel_platform} primary video or static concept",
++        "Hook variants for first-frame testing",
++        "Proof/claim visual card",
++        "Approval notes for claims and restricted topics",
++    ]
++    provider_notes = [
++        "Manual dashboard mode is safest until the brief and claims are approved.",
++        "API providers should remain blocked until budget and human approval are explicit.",
++    ]
++    if data.forbidden_topics or data.compliance_notes:
++        provider_notes.append("Run compliance review before provider execution.")
++
++    creative_angles = _build_angles(data, pain_points)
++    missing_information = _build_missing_information(data)
++    campaign_objective = (
++        _sentences(data.raw_brief, 1)[0]
++        if _sentences(data.raw_brief, 1)
++        else f"Create a {data.channel_platform} campaign for {data.product_service_description}."
++    )
++
++    approval_checklist = [
++        "Confirm campaign objective and KPI.",
++        "Confirm approved claims and forbidden topics.",
++        "Confirm budget ceiling before any paid provider execution.",
++        "Confirm final target audience and channel format.",
++    ]
++
++    sprint_handoff: dict[str, object] = {
++        "client_id": data.client_id,
++        "product_name": data.product_service_description[:120],
++        "campaign_objective": campaign_objective,
++        "target_audience": data.target_audience,
++        "brief": data.raw_brief,
++        "mode": "dashboard_manual",
++        "creative_angles": creative_angles,
++        "missing_information_count": len(missing_information),
++    }
++
++    return BriefIntakeResponse(
++        status="ready",
++        campaign_objective=campaign_objective,
++        offer_and_promise=f"Position {data.product_service_description} for {data.target_audience}.",
++        target_persona=data.target_audience,
++        pain_points=pain_points,
++        objections=objections,
++        creative_angles=creative_angles,
++        required_assets=required_assets,
++        suggested_sprint_type="manual_dashboard_validation",
++        provider_suitability_notes=provider_notes,
++        approval_checklist=approval_checklist,
++        missing_information=missing_information,
++        sprint_handoff=sprint_handoff,
++        summary=(
++            f"Prepared compact brief for {data.channel_platform} with "
++            f"{len(creative_angles)} angles and {len(missing_information)} open question(s)."
++        ),
++        next_action="create_creative_sprint",
++    )
+diff --git a/src/vos_studio_mcp/tools/__init__.py b/src/vos_studio_mcp/tools/__init__.py
+index 46d9d68..1bad5a8 100644
+--- a/src/vos_studio_mcp/tools/__init__.py
++++ b/src/vos_studio_mcp/tools/__init__.py
+@@ -10,6 +10,7 @@ from vos_studio_mcp.tools.get_sprint_status import register_get_sprint_status_to
+ from vos_studio_mcp.tools.get_video_job_status import register_get_video_job_status_tools
+ from vos_studio_mcp.tools.list_sprint_assets import register_list_sprint_assets_tools
+ from vos_studio_mcp.tools.list_video_jobs import register_list_video_jobs_tools
++from vos_studio_mcp.tools.prepare_creative_brief import register_prepare_creative_brief_tools
+ from vos_studio_mcp.tools.prepare_dashboard_pack import register_prepare_dashboard_pack_tools
+ from vos_studio_mcp.tools.prepare_video_blueprint import register_prepare_video_blueprint_tools
+ from vos_studio_mcp.tools.promote_to_library import register_promote_to_library_tools
+@@ -29,6 +30,7 @@ def register_tools(mcp: FastMCP) -> None:
+     register_status_tools(mcp)
+     register_create_client_tools(mcp)
+     register_save_brand_kit_tools(mcp)
++    register_prepare_creative_brief_tools(mcp)
+     register_create_sprint_tools(mcp)
+     register_get_sprint_status_tools(mcp)
+     register_prepare_dashboard_pack_tools(mcp)
+diff --git a/src/vos_studio_mcp/tools/prepare_creative_brief.py b/src/vos_studio_mcp/tools/prepare_creative_brief.py
+new file mode 100644
+index 0000000..c9d5802
+--- /dev/null
++++ b/src/vos_studio_mcp/tools/prepare_creative_brief.py
+@@ -0,0 +1,21 @@
++"""prepare_creative_brief MCP tool."""
++
++from mcp.server.fastmcp import FastMCP
++
++from vos_studio_mcp.schemas.brief import BriefIntakeInput, BriefIntakeResponse
++from vos_studio_mcp.services.brief_service import (
++    prepare_creative_brief as _prepare_creative_brief,
++)
++from vos_studio_mcp.tools._instrumentation import instrument
++
++
++def register_prepare_creative_brief_tools(mcp: FastMCP) -> None:
++    @mcp.tool()
++    @instrument
++    async def prepare_creative_brief(data: BriefIntakeInput) -> BriefIntakeResponse:
++        """Normalize messy client input into a compact sprint-ready creative brief.
++
++        Produces strategy, asset, approval, and missing-information sections
++        without external provider calls or paid side effects.
++        """
++        return await _prepare_creative_brief(data)
+diff --git a/tests/services/test_brief_service.py b/tests/services/test_brief_service.py
+new file mode 100644
+index 0000000..1031c91
+--- /dev/null
++++ b/tests/services/test_brief_service.py
+@@ -0,0 +1,69 @@
++"""Unit tests for brief_service.prepare_creative_brief."""
++
++from unittest.mock import AsyncMock, patch
++
++import pytest
++
++from vos_studio_mcp.schemas.brief import BriefIntakeInput
++from vos_studio_mcp.services.brief_service import prepare_creative_brief
++
++_MODULE = "vos_studio_mcp.services.brief_service"
++
++
++def _input(**overrides: object) -> BriefIntakeInput:
++    data: dict[str, object] = {
++        "client_id": "00000000-0000-0000-0000-000000000001",
++        "raw_brief": "Launch a TikTok campaign for a serum. Goal is trials from busy buyers.",
++        "product_service_description": "Hydrating serum",
++        "target_audience": "Busy skincare buyers",
++        "channel_platform": "TikTok",
++        "brand_voice": "clinical but warm",
++    }
++    data.update(overrides)
++    return BriefIntakeInput(**data)  # type: ignore[arg-type]
++
++
++@pytest.mark.asyncio
++async def test_prepare_creative_brief_returns_compact_handoff() -> None:
++    with (
++        patch(f"{_MODULE}.assert_owns_client"),
++        patch(f"{_MODULE}.check_rate_limit", new_callable=AsyncMock),
++    ):
++        result = await prepare_creative_brief(_input())
++
++    assert result.status == "ready"
++    assert result.next_action == "create_creative_sprint"
++    assert result.suggested_sprint_type == "manual_dashboard_validation"
++    assert len(result.creative_angles) == 4
++    assert result.sprint_handoff["mode"] == "dashboard_manual"
++    assert result.sprint_handoff["missing_information_count"] == len(result.missing_information)
++
++
++@pytest.mark.asyncio
++async def test_prepare_creative_brief_surfaces_missing_claims_and_budget() -> None:
++    with (
++        patch(f"{_MODULE}.assert_owns_client"),
++        patch(f"{_MODULE}.check_rate_limit", new_callable=AsyncMock),
++    ):
++        result = await prepare_creative_brief(
++            _input(raw_brief="Need some creative ideas.", claims=[], compliance_notes=[])
++        )
++
++    topics = {question.topic for question in result.missing_information}
++    assert "objective" in topics
++    assert "timing_budget" in topics
++    assert "claims_compliance" in topics
++
++
++@pytest.mark.asyncio
++async def test_prepare_creative_brief_respects_restricted_topics() -> None:
++    with (
++        patch(f"{_MODULE}.assert_owns_client"),
++        patch(f"{_MODULE}.check_rate_limit", new_callable=AsyncMock),
++    ):
++        result = await prepare_creative_brief(
++            _input(forbidden_topics=["medical diagnosis"], compliance_notes=["No cure claims."])
++        )
++
++    assert any("restricted topics" in objection for objection in result.objections)
++    assert any("compliance review" in note for note in result.provider_suitability_notes)
+diff --git a/tests/tools/test_tools_layer.py b/tests/tools/test_tools_layer.py
+index 71124c0..59eb95d 100644
+--- a/tests/tools/test_tools_layer.py
++++ b/tests/tools/test_tools_layer.py
+@@ -52,6 +52,7 @@ _EXPECTED_TOOLS = {
+     "get_server_status",
+     "create_client",
+     "save_brand_kit",
++    "prepare_creative_brief",
+     "create_creative_sprint",
+     "get_sprint_status",
+     "prepare_dashboard_pack",
+@@ -179,6 +180,54 @@ async def test_save_brand_kit_delegates_to_service() -> None:
+     assert result is mock_resp
+ 
+ 
++# ---------------------------------------------------------------------------
++# prepare_creative_brief.py
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_prepare_creative_brief_delegates_to_service() -> None:
++    from vos_studio_mcp.schemas.brief import BriefIntakeInput, BriefIntakeResponse
++    from vos_studio_mcp.tools.prepare_creative_brief import register_prepare_creative_brief_tools
++
++    mock_mcp, captured = _make_mock_mcp()
++    register_prepare_creative_brief_tools(mock_mcp)  # type: ignore[arg-type]
++
++    data = BriefIntakeInput(
++        client_id=_client_id(),
++        raw_brief="Need TikTok launch ideas for a skincare serum.",
++        product_service_description="Hydrating serum",
++        target_audience="Busy skincare buyers",
++        channel_platform="TikTok",
++    )
++    mock_resp = BriefIntakeResponse(
++        status="ready",
++        campaign_objective="Need TikTok launch ideas for a skincare serum",
++        offer_and_promise="Position Hydrating serum for Busy skincare buyers.",
++        target_persona="Busy skincare buyers",
++        pain_points=["Need TikTok launch ideas for a skincare serum"],
++        objections=["Unclear value versus current alternatives."],
++        creative_angles=["Proof-first angle"],
++        required_assets=["TikTok primary concept"],
++        suggested_sprint_type="manual_dashboard_validation",
++        provider_suitability_notes=["Manual dashboard mode is safest."],
++        approval_checklist=["Confirm claims."],
++        missing_information=[],
++        sprint_handoff={"client_id": _client_id()},
++        summary="Prepared compact brief.",
++        next_action="create_creative_sprint",
++    )
++
++    with patch(
++        "vos_studio_mcp.tools.prepare_creative_brief._prepare_creative_brief",
++        new=AsyncMock(return_value=mock_resp),
++    ) as mock_svc:
++        result = await captured["prepare_creative_brief"](data=data)
++
++    mock_svc.assert_awaited_once_with(data)
++    assert result is mock_resp
++
++
+ # ---------------------------------------------------------------------------
+ # create_creative_sprint.py
+ # ---------------------------------------------------------------------------
