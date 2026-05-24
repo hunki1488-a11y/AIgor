@@ -22,6 +22,8 @@ https://github.com/hunki1488-a11y/AIgor/issues/7
 - `aim#609` background Gemini CLI isolation: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/aim-609-background-gemini-cli-isolation.md
 - `vos-studio-mcp#48` brief intake wizard: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/vos-studio-mcp-48-brief-intake.md
 - `vos-studio-mcp#48` PR-ready patch: https://github.com/hunki1488-a11y/AIgor/blob/main/submissions/vos-studio-mcp-48-brief-intake.patch
+- `mnemopay-sdk#15` root require export: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/mnemopay-sdk-15-root-require-export.md
+- `mnemopay-sdk#15` PR-ready patch: https://github.com/hunki1488-a11y/AIgor/blob/main/submissions/mnemopay-sdk-15-root-require-export.patch
 
 ## AIBTC Cross-Post Issues
 
