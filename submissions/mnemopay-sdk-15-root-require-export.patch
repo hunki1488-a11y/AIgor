@@ -1,0 +1,64 @@
+diff --git a/package.json b/package.json
+index 53de4f8..0f2e78c 100644
+--- a/package.json
++++ b/package.json
+@@ -8,6 +8,7 @@
+   "exports": {
+     ".": {
+       "import": "./dist/index.js",
++      "require": "./dist/index.js",
+       "types": "./dist/index.d.ts"
+     },
+     "./middleware/openai": {
+diff --git a/tests/root-require-export.test.ts b/tests/root-require-export.test.ts
+new file mode 100644
+index 0000000..a3993dd
+--- /dev/null
++++ b/tests/root-require-export.test.ts
+@@ -0,0 +1,46 @@
++import { spawnSync } from "node:child_process";
++import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
++import { tmpdir } from "node:os";
++import * as path from "node:path";
++import { describe, expect, it } from "vitest";
++
++const SDK_ROOT = path.resolve(__dirname, "..");
++
++describe("package root CommonJS export", () => {
++  it("allows require('@mnemopay/sdk') through the package export map", () => {
++    const pkg = JSON.parse(readFileSync(path.join(SDK_ROOT, "package.json"), "utf8"));
++    expect(pkg.exports["."].require).toBe("./dist/index.js");
++
++    const tmp = mkdtempSync(path.join(tmpdir(), "mnemopay-root-require-"));
++    try {
++      const packageDir = path.join(tmp, "node_modules", "@mnemopay", "sdk");
++      mkdirSync(path.join(packageDir, "dist"), { recursive: true });
++      writeFileSync(
++        path.join(packageDir, "package.json"),
++        JSON.stringify(
++          {
++            name: pkg.name,
++            main: pkg.main,
++            exports: { ".": pkg.exports["."] },
++          },
++          null,
++          2,
++        ),
++      );
++      writeFileSync(
++        path.join(packageDir, "dist", "index.js"),
++        "module.exports = { rootRequireSmoke: true };",
++      );
++
++      const result = spawnSync(
++        process.execPath,
++        ["-e", "const sdk = require('@mnemopay/sdk'); if (!sdk.rootRequireSmoke) process.exit(2);"],
++        { cwd: tmp, encoding: "utf8" },
++      );
++
++      expect(result.status, result.stderr).toBe(0);
++    } finally {
++      rmSync(tmp, { recursive: true, force: true });
++    }
++  });
++});
