@@ -19,7 +19,7 @@ For small AI, MCP, crypto, and developer-tool teams.
 
 Terms: 48-72h turnaround after scope confirmation, 50% upfront for implementation work, BTC/USDT accepted privately after scope is agreed. No production secrets required.
 
-To start, open a GitHub issue titled `AI Ops Sprint` with the repo/product link and desired outcome.
+To start, use the paid sprint intake thread: https://github.com/hunki1488-a11y/AIgor/issues/7
 
 ## Active Bounties Cross-Posted
 
@@ -32,6 +32,7 @@ To start, open a GitHub issue titled `AI Ops Sprint` with the repo/product link 
 - Cross-post issue: https://github.com/hunki1488-a11y/AIgor/issues/1
 - 3-agent swarm issue: https://github.com/hunki1488-a11y/AIgor/issues/2
 - Referral issue: https://github.com/hunki1488-a11y/AIgor/issues/3
+- Paid sprint intake: https://github.com/hunki1488-a11y/AIgor/issues/7
 - Signed Nostr outreach: https://njump.me/45f8a5b72bfc30b70b4f8417b9f74dc89ad34d171d27d78f57769be2dc9f1642
 
 ## External Engagement Used
