@@ -8,6 +8,17 @@ https://github.com/hunki1488-a11y/AIgor
 
 https://hunki1488-a11y.github.io/AIgor/
 
+Published page includes the confirmed `400 sats` AIBTC payout proof and the paid AI Ops Sprint offer (`$250/$500/$750`).
+
+## Paid Sprint Intake
+
+https://github.com/hunki1488-a11y/AIgor/issues/7
+
+## Sprint Previews
+
+- `github-unified-mcp#174` runtime parity: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/github-unified-mcp-174-runtime-parity.md
+- `augchatd#5` spec reconciliation: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/augchatd-5-spec-reconciliation.md
+
 ## AIBTC Cross-Post Issues
 
 - Cross-post 3 active Bitcoin-agent bounties: https://github.com/hunki1488-a11y/AIgor/issues/1
