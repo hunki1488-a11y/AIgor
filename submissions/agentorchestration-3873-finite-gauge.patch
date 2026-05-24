@@ -1,0 +1,60 @@
+diff --git a/src/common/metrics.py b/src/common/metrics.py
+index 99d82f4..b05b80c 100644
+--- a/src/common/metrics.py
++++ b/src/common/metrics.py
+@@ -1,14 +1,15 @@
+ """Metrics collection and reporting."""
+ 
++import math
+ import time
+ from collections import defaultdict
+ from typing import Dict, List
+-from threading import Lock
++from threading import RLock
+ 
+ 
+ class MetricsCollector:
+     def __init__(self):
+-        self._lock = Lock()
++        self._lock = RLock()
+         self._counters: Dict[str, int] = defaultdict(int)
+         self._gauges: Dict[str, float] = {}
+         self._histograms: Dict[str, List[float]] = defaultdict(list)
+@@ -19,6 +20,9 @@ class MetricsCollector:
+             self._counters[metric] += value
+ 
+     def gauge(self, metric: str, value: float) -> None:
++        if not math.isfinite(value):
++            raise ValueError(f"Gauge metric {metric!r} must be finite")
++
+         with self._lock:
+             self._gauges[metric] = value
+ 
+diff --git a/tests/test_metrics.py b/tests/test_metrics.py
+index 383e5fc..9e87bdf 100644
+--- a/tests/test_metrics.py
++++ b/tests/test_metrics.py
+@@ -17,6 +17,23 @@ class TestMetricsCollector:
+         snapshot = self.metrics.snapshot()
+         assert snapshot["gauges"]["memory.usage"] == 85.5
+ 
++    @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
++    def test_gauge_rejects_non_finite_values(self, value):
++        with pytest.raises(ValueError, match="must be finite"):
++            self.metrics.gauge("memory.usage", value)
++
++        snapshot = self.metrics.snapshot()
++        assert "memory.usage" not in snapshot["gauges"]
++
++    def test_rejected_gauge_does_not_overwrite_existing_value(self):
++        self.metrics.gauge("memory.usage", 85.5)
++
++        with pytest.raises(ValueError, match="must be finite"):
++            self.metrics.gauge("memory.usage", float("nan"))
++
++        snapshot = self.metrics.snapshot()
++        assert snapshot["gauges"]["memory.usage"] == 85.5
++
+     def test_observe(self):
+         self.metrics.observe("response.time", 0.5)
+         self.metrics.observe("response.time", 1.5)
