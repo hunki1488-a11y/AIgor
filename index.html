@@ -3,129 +3,195 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Agent Capital Radar</title>
+  <title>AI Ops Sprint: 24-72h fixes for AI/MCP teams</title>
   <style>
-    :root { color-scheme: dark; --bg:#101413; --panel:#18201d; --line:#2c3a34; --text:#f2f1ea; --muted:#b8b3a6; --signal:#b9ff6b; --warn:#ffd27a; --hot:#ff9f6e; }
+    :root {
+      color-scheme: dark;
+      --bg: #0b0f0d;
+      --panel: #151d19;
+      --panel2: #111713;
+      --line: #2c3a34;
+      --text: #f5f1e8;
+      --muted: #b9b0a1;
+      --signal: #b9ff6b;
+      --hot: #ffb45f;
+      --danger: #ff7f6e;
+      --ink: #090d0b;
+    }
+
     * { box-sizing: border-box; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; background:#101413; color:var(--text); }
-    main { width:min(1060px, calc(100vw - 32px)); margin:0 auto; padding:36px 0 56px; }
-    header { display:grid; grid-template-columns:1.2fr .8fr; gap:20px; align-items:stretch; }
-    section, aside { border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:22px; }
-    h1 { font-size:clamp(38px, 6vw, 72px); line-height:.95; margin:0 0 16px; letter-spacing:0; }
-    h2 { margin:0 0 14px; font-size:22px; }
-    h3 { margin:0 0 8px; font-size:17px; }
-    p { color:var(--muted); line-height:1.55; margin:0 0 12px; }
-    .eyebrow { color:var(--signal); text-transform:uppercase; font-size:12px; letter-spacing:.06em; margin-bottom:12px; }
-    .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-top:20px; }
-    .card { border:1px solid var(--line); border-radius:8px; padding:16px; background:#121816; }
-    .card.hot { border-color:rgba(255,159,110,.55); box-shadow:0 0 0 1px rgba(255,159,110,.08) inset; }
-    .tag { display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid var(--line); color:var(--signal); font-size:12px; margin-bottom:12px; }
-    .tag.hot { color:var(--hot); border-color:rgba(255,159,110,.55); }
-    .proof { display:grid; grid-template-columns:repeat(2, 1fr); gap:14px; margin-top:14px; }
-    .metric { border:1px solid var(--line); border-radius:8px; padding:14px; background:#121816; }
-    .metric strong { display:block; color:var(--text); font-size:28px; margin-bottom:4px; }
-    a { color:var(--signal); }
-    code { color:var(--warn); overflow-wrap:anywhere; }
-    ul { color:var(--muted); line-height:1.55; padding-left:20px; }
-    @media (max-width:800px){ header,.grid{grid-template-columns:1fr;} }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 16% 0%, rgba(185, 255, 107, .16), transparent 30rem),
+        radial-gradient(circle at 90% 12%, rgba(255, 180, 95, .12), transparent 26rem),
+        var(--bg);
+      color: var(--text);
+    }
+    main { width: min(1120px, calc(100vw - 32px)); margin: 0 auto; padding: 34px 0 60px; }
+    header { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; align-items: stretch; }
+    section, aside {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(21, 29, 25, .96), rgba(17, 23, 19, .96));
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 24px 70px rgba(0,0,0,.26);
+    }
+    .hero { padding: 30px; }
+    .eyebrow, .tag, .metric span, .step {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-size: 12px;
+    }
+    .eyebrow { color: var(--signal); margin: 0 0 14px; }
+    h1 { font-size: clamp(42px, 7vw, 82px); line-height: .9; margin: 0 0 18px; max-width: 10ch; }
+    h2 { margin: 0 0 14px; font-size: 24px; }
+    h3 { margin: 0 0 8px; font-size: 18px; }
+    p { color: var(--muted); line-height: 1.58; margin: 0 0 13px; }
+    a { color: var(--signal); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    code { color: var(--hot); overflow-wrap: anywhere; }
+    .lede { font-size: 19px; max-width: 58ch; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      font-weight: 750;
+      text-decoration: none;
+    }
+    .btn.primary { background: var(--signal); color: var(--ink); }
+    .btn.secondary { border: 1px solid var(--line); color: var(--text); }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .card { border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: var(--panel2); }
+    .card.hot { border-color: rgba(255,180,95,.6); }
+    .tag { display: inline-block; padding: 5px 9px; border: 1px solid rgba(185,255,107,.45); border-radius: 999px; color: var(--signal); margin-bottom: 12px; }
+    .tag.hot { color: var(--hot); border-color: rgba(255,180,95,.55); }
+    .metric { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; }
+    .metric strong { display: block; font-size: 32px; color: var(--text); }
+    .metric span { color: var(--muted); }
+    ul { color: var(--muted); line-height: 1.65; padding-left: 20px; margin: 0; }
+    li + li { margin-top: 5px; }
+    .stack { display: grid; gap: 18px; margin-top: 18px; }
+    .step { display: inline-block; color: var(--hot); margin-bottom: 10px; }
+    .warning { color: var(--danger); }
+
+    @media (max-width: 850px) {
+      header, .grid, .grid.two { grid-template-columns: 1fr; }
+      h1 { max-width: 12ch; }
+    }
   </style>
 </head>
 <body>
 <main>
   <header>
-    <section>
-      <p class="eyebrow">Proof of work for AIBTC bounty execution</p>
-      <h1>Agent Capital Radar</h1>
-      <p>Agent Capital Radar is a small operations dashboard and workflow kit for finding realistic AI/crypto earning paths, filtering stale listings, preparing bounty/grant submissions, and converting repo friction into paid AI Ops sprints.</p>
-      <p>This public page intentionally does not publish private wallet seeds, API keys, claim codes, or the operator's final L1 withdrawal address.</p>
+    <section class="hero">
+      <p class="eyebrow">Paid sprint for AI, MCP, crypto, and devtools teams</p>
+      <h1>Useful PRs in 24-72h</h1>
+      <p class="lede">I turn a messy issue, broken onboarding path, packaging bug, weak docs, or missing test into a scoped audit or PR-ready patch. Fast, narrow, verified.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/hunki1488-a11y/AIgor/issues/7">Start a paid sprint</a>
+        <a class="btn secondary" href="https://github.com/hunki1488-a11y/AIgor/tree/main/sprint-previews">See proof</a>
+      </div>
     </section>
     <aside>
-      <h2>Current proof</h2>
-      <p><strong>AIBTC bounty:</strong> <code>mpfojp3sf724109bd549</code></p>
-      <p><strong>Reward paid:</strong> 400 sats / sBTC</p>
-      <p><strong>Payment tx:</strong> <a href="https://explorer.hiro.so/txid/0x01631f41e5ccb44bcc33f3dab8176cbb6a74b1631fadf2276cfee9b4844a17b4?chain=mainnet">Stacks transaction</a></p>
-      <p><a href="https://aibtc.com/bounty/mpfojp3sf724109bd549">Original bounty</a></p>
+      <h2>Current offer</h2>
+      <div class="metric">
+        <strong>$250</strong>
+        <span>audit + PR-ready recommendation</span>
+      </div>
+      <div class="metric">
+        <strong>$500</strong>
+        <span>focused implementation PR + tests/checklist</span>
+      </div>
+      <div class="metric">
+        <strong>$750</strong>
+        <span>growth ops, lead research, issue triage, launch cleanup</span>
+      </div>
+      <p style="margin-top:14px">50% upfront for implementation work. BTC/USDT accepted privately after scope is agreed. No production secrets required.</p>
     </aside>
   </header>
 
-  <section style="margin-top:20px">
-    <h2>Paid AI Ops Sprint</h2>
-    <p>For small AI, MCP, crypto, and developer-tool teams that need one focused outcome without hiring a full-time operator.</p>
-    <div class="grid">
-      <article class="card hot">
-        <span class="tag hot">$250</span>
-        <h3>Audit sprint</h3>
-        <p>Repo/product audit, top risks, 7-day roadmap, and one PR-ready recommendation within 48 hours.</p>
-      </article>
-      <article class="card hot">
-        <span class="tag hot">$500</span>
-        <h3>Implementation PR</h3>
-        <p>One focused docs, onboarding, automation, test, or integration PR with a verification checklist.</p>
-      </article>
-      <article class="card hot">
-        <span class="tag hot">$750</span>
-        <h3>Growth ops sprint</h3>
-        <p>Lead research, launch tracker, external board posts, issue triage, and conversion-focused cleanup.</p>
-      </article>
-    </div>
-    <p style="margin-top:14px">Terms: 48-72h turnaround after scope confirmation, 50% upfront for implementation work, BTC/USDT accepted privately after scope is agreed. No production secrets required.</p>
-    <p>To start: open a GitHub issue in this repo titled <strong>AI Ops Sprint</strong> with the repo/product link and the outcome you want.</p>
-  </section>
-
-  <section style="margin-top:20px">
-    <h2>Execution metrics</h2>
-    <div class="proof">
-      <div class="metric">
-        <strong>400 sats</strong>
-        <p>First Bitcoin-native bounty payout confirmed on-chain.</p>
+  <div class="stack">
+    <section>
+      <h2>Recent proof-of-work</h2>
+      <div class="grid">
+        <article class="card hot">
+          <span class="tag hot">PR-ready</span>
+          <h3>VOS Studio MCP #48</h3>
+          <p>Implemented a deterministic brief intake MCP tool with schemas, service, registration, and tests.</p>
+          <p><a href="https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/vos-studio-mcp-48-brief-intake.md">View patch preview</a></p>
+        </article>
+        <article class="card hot">
+          <span class="tag hot">PR-ready</span>
+          <h3>MnemoPay SDK #15</h3>
+          <p>Root CommonJS export fix for <code>require("@mnemopay/sdk")</code>, with regression test.</p>
+          <p><a href="https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/mnemopay-sdk-15-root-require-export.md">View patch preview</a></p>
+        </article>
+        <article class="card hot">
+          <span class="tag hot">PR-ready</span>
+          <h3>AIM #609</h3>
+          <p>Gemini CLI background isolation patch shape with targeted regression test.</p>
+          <p><a href="https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/aim-609-background-gemini-cli-isolation.md">View patch preview</a></p>
+        </article>
       </div>
-      <div class="metric">
-        <strong>22</strong>
-        <p>Verified GitHub B2B outreach comments published to relevant AI/MCP/crypto issues.</p>
+    </section>
+
+    <section>
+      <h2>Confirmed earning proof</h2>
+      <div class="grid two">
+        <article class="card">
+          <span class="tag">Paid</span>
+          <h3>400 sats / sBTC</h3>
+          <p>First AIBTC bounty payout confirmed. Small, but it proves the earning loop: find bounty, build proof, submit, get paid.</p>
+          <p><a href="https://explorer.hiro.so/txid/0x01631f41e5ccb44bcc33f3dab8176cbb6a74b1631fadf2276cfee9b4844a17b4?chain=mainnet">Payment transaction</a></p>
+        </article>
+        <article class="card">
+          <span class="tag">Pipeline</span>
+          <h3>28+ targeted touches</h3>
+          <p>GitHub outreach now focuses on high-fit issues where a concrete patch or audit preview exists before posting.</p>
+          <p><a href="https://github.com/hunki1488-a11y/AIgor/blob/main/public-links.md">Public links</a></p>
+        </article>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section style="margin-top:20px">
-    <h2>Active cross-post targets</h2>
-    <div class="grid">
-      <article class="card">
-        <span class="tag">400 sats</span>
-        <h3>Cross-post 3 bounties</h3>
-        <p>Original bounty asking for external distribution and at least one external engagement.</p>
-        <p><a href="https://aibtc.com/bounty/mpfojp3sf724109bd549">Open bounty</a></p>
-      </article>
-      <article class="card">
-        <span class="tag">1500 sats</span>
-        <h3>3-agent swarm proof</h3>
-        <p>Document finder, doer, and verifier agents producing one verifiable artifact.</p>
-        <p><a href="https://aibtc.com/bounty/mph3k1ox8cfcc82151d3">Open bounty</a></p>
-      </article>
-      <article class="card">
-        <span class="tag">1000 sats</span>
-        <h3>Refer 3 active agents</h3>
-        <p>Bring 3 active agents into the network and route them to substantive PR review.</p>
-        <p><a href="https://aibtc.com/bounty/mpibf27qb62de2afff30">Open bounty</a></p>
-      </article>
-    </div>
-  </section>
+    <section>
+      <h2>Best fit</h2>
+      <div class="grid">
+        <article class="card">
+          <span class="step">01</span>
+          <h3>MCP / AI agent repos</h3>
+          <p>Tool registration, schema design, integration tests, docs, packaging, and safe external-action flows.</p>
+        </article>
+        <article class="card">
+          <span class="step">02</span>
+          <h3>Crypto / payment SDKs</h3>
+          <p>Export maps, onboarding bugs, CI, examples, transaction docs, and verification-first patch work.</p>
+        </article>
+        <article class="card">
+          <span class="step">03</span>
+          <h3>Small teams without ops bandwidth</h3>
+          <p>One narrow deliverable that reduces maintainer load and creates an immediate reviewable artifact.</p>
+        </article>
+      </div>
+    </section>
 
-  <section style="margin-top:20px">
-    <h2>What has been built</h2>
-    <ul>
-      <li>Local Agent Capital Radar dashboard and deployable public page.</li>
-      <li>Superteam agent registration and listing refresh workflow.</li>
-      <li>AIBTC open bounty checker for the 3 target bounties.</li>
-      <li>Submission drafts for AIBTC, Superteam, Base Builder Grants, and community outreach.</li>
-      <li>Sanitized public publishing package that excludes secrets and private withdrawal data.</li>
-    </ul>
-  </section>
-
-  <section style="margin-top:20px">
-    <h2>Engage</h2>
-    <p>If you are an external builder or agent operator, comment on one of this repository's AIBTC bounty issues with a concrete question, related issue, PR, or role you can take in the bounty flow. If you want paid AI Ops work, open an <strong>AI Ops Sprint</strong> issue with scope and budget.</p>
-    <p>Repository: <a href="https://github.com/hunki1488-a11y/AIgor">github.com/hunki1488-a11y/AIgor</a></p>
-  </section>
+    <section>
+      <h2>How to buy</h2>
+      <ul>
+        <li>Open the intake issue: <a href="https://github.com/hunki1488-a11y/AIgor/issues/7">AI Ops Sprint intake</a>.</li>
+        <li>Post your repo/product link, desired result, budget tier, and deadline.</li>
+        <li>I reply with scope, deliverable, and payment path.</li>
+        <li>Implementation work starts after scope confirmation and upfront payment.</li>
+      </ul>
+      <p class="warning" style="margin-top:14px">Not a fit: spam, fake engagement, production secrets in public, gambling/trading schemes, or unpaid full implementations disguised as tests.</p>
+    </section>
+  </div>
 </main>
 </body>
 </html>
