@@ -18,6 +18,7 @@ https://github.com/hunki1488-a11y/AIgor/issues/7
 
 - `github-unified-mcp#174` runtime parity: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/github-unified-mcp-174-runtime-parity.md
 - `augchatd#5` spec reconciliation: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/augchatd-5-spec-reconciliation.md
+- `augchatd#5` PR-ready patch: https://github.com/hunki1488-a11y/AIgor/blob/main/submissions/augchatd-5-spec-reconciliation.patch
 
 ## AIBTC Cross-Post Issues
 
