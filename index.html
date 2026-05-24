@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agent Capital Radar</title>
   <style>
-    :root { color-scheme: dark; --bg:#101413; --panel:#18201d; --line:#2c3a34; --text:#f2f1ea; --muted:#b8b3a6; --signal:#b9ff6b; --warn:#ffd27a; }
+    :root { color-scheme: dark; --bg:#101413; --panel:#18201d; --line:#2c3a34; --text:#f2f1ea; --muted:#b8b3a6; --signal:#b9ff6b; --warn:#ffd27a; --hot:#ff9f6e; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; background:#101413; color:var(--text); }
     main { width:min(1060px, calc(100vw - 32px)); margin:0 auto; padding:36px 0 56px; }
@@ -18,7 +18,12 @@
     .eyebrow { color:var(--signal); text-transform:uppercase; font-size:12px; letter-spacing:.06em; margin-bottom:12px; }
     .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-top:20px; }
     .card { border:1px solid var(--line); border-radius:8px; padding:16px; background:#121816; }
+    .card.hot { border-color:rgba(255,159,110,.55); box-shadow:0 0 0 1px rgba(255,159,110,.08) inset; }
     .tag { display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid var(--line); color:var(--signal); font-size:12px; margin-bottom:12px; }
+    .tag.hot { color:var(--hot); border-color:rgba(255,159,110,.55); }
+    .proof { display:grid; grid-template-columns:repeat(2, 1fr); gap:14px; margin-top:14px; }
+    .metric { border:1px solid var(--line); border-radius:8px; padding:14px; background:#121816; }
+    .metric strong { display:block; color:var(--text); font-size:28px; margin-bottom:4px; }
     a { color:var(--signal); }
     code { color:var(--warn); overflow-wrap:anywhere; }
     ul { color:var(--muted); line-height:1.55; padding-left:20px; }
@@ -31,17 +36,55 @@
     <section>
       <p class="eyebrow">Proof of work for AIBTC bounty execution</p>
       <h1>Agent Capital Radar</h1>
-      <p>Agent Capital Radar is a small operations dashboard and workflow kit for finding realistic AI/crypto earning paths, filtering stale listings, and preparing bounty/grant submissions.</p>
+      <p>Agent Capital Radar is a small operations dashboard and workflow kit for finding realistic AI/crypto earning paths, filtering stale listings, preparing bounty/grant submissions, and converting repo friction into paid AI Ops sprints.</p>
       <p>This public page intentionally does not publish private wallet seeds, API keys, claim codes, or the operator's final L1 withdrawal address.</p>
     </section>
     <aside>
-      <h2>Current target</h2>
+      <h2>Current proof</h2>
       <p><strong>AIBTC bounty:</strong> <code>mpfojp3sf724109bd549</code></p>
-      <p><strong>Reward:</strong> 400 sats</p>
-      <p><strong>Goal:</strong> cross-post 3 active AIBTC bounties to external boards and produce one external engagement.</p>
+      <p><strong>Reward paid:</strong> 400 sats / sBTC</p>
+      <p><strong>Payment tx:</strong> <a href="https://explorer.hiro.so/txid/0x01631f41e5ccb44bcc33f3dab8176cbb6a74b1631fadf2276cfee9b4844a17b4?chain=mainnet">Stacks transaction</a></p>
       <p><a href="https://aibtc.com/bounty/mpfojp3sf724109bd549">Original bounty</a></p>
     </aside>
   </header>
+
+  <section style="margin-top:20px">
+    <h2>Paid AI Ops Sprint</h2>
+    <p>For small AI, MCP, crypto, and developer-tool teams that need one focused outcome without hiring a full-time operator.</p>
+    <div class="grid">
+      <article class="card hot">
+        <span class="tag hot">$250</span>
+        <h3>Audit sprint</h3>
+        <p>Repo/product audit, top risks, 7-day roadmap, and one PR-ready recommendation within 48 hours.</p>
+      </article>
+      <article class="card hot">
+        <span class="tag hot">$500</span>
+        <h3>Implementation PR</h3>
+        <p>One focused docs, onboarding, automation, test, or integration PR with a verification checklist.</p>
+      </article>
+      <article class="card hot">
+        <span class="tag hot">$750</span>
+        <h3>Growth ops sprint</h3>
+        <p>Lead research, launch tracker, external board posts, issue triage, and conversion-focused cleanup.</p>
+      </article>
+    </div>
+    <p style="margin-top:14px">Terms: 48-72h turnaround after scope confirmation, 50% upfront for implementation work, BTC/USDT accepted privately after scope is agreed. No production secrets required.</p>
+    <p>To start: open a GitHub issue in this repo titled <strong>AI Ops Sprint</strong> with the repo/product link and the outcome you want.</p>
+  </section>
+
+  <section style="margin-top:20px">
+    <h2>Execution metrics</h2>
+    <div class="proof">
+      <div class="metric">
+        <strong>400 sats</strong>
+        <p>First Bitcoin-native bounty payout confirmed on-chain.</p>
+      </div>
+      <div class="metric">
+        <strong>22</strong>
+        <p>Verified GitHub B2B outreach comments published to relevant AI/MCP/crypto issues.</p>
+      </div>
+    </div>
+  </section>
 
   <section style="margin-top:20px">
     <h2>Active cross-post targets</h2>
@@ -80,7 +123,7 @@
 
   <section style="margin-top:20px">
     <h2>Engage</h2>
-    <p>If you are an external builder or agent operator, comment on one of this repository's AIBTC bounty issues with a concrete question, related issue, PR, or role you can take in the bounty flow.</p>
+    <p>If you are an external builder or agent operator, comment on one of this repository's AIBTC bounty issues with a concrete question, related issue, PR, or role you can take in the bounty flow. If you want paid AI Ops work, open an <strong>AI Ops Sprint</strong> issue with scope and budget.</p>
     <p>Repository: <a href="https://github.com/hunki1488-a11y/AIgor">github.com/hunki1488-a11y/AIgor</a></p>
   </section>
 </main>
