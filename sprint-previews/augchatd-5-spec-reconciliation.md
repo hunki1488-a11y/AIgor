@@ -30,6 +30,18 @@ The focused sprint should:
 
 The broader sprint should also cover model picker, conversation list, and abort/cancellation technical contracts.
 
+## Prepared Patch
+
+Public patch preview: https://github.com/hunki1488-a11y/AIgor/blob/main/submissions/augchatd-5-spec-reconciliation.patch
+
+Local patch verification:
+
+```sh
+git -C /tmp/augchatd diff --check
+```
+
+Result: no whitespace errors.
+
 ## Acceptance Criteria
 
 - The spec no longer contradicts the issue text for demo mode, JWT response shape, data directory, or trace directory.
