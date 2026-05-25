@@ -1,0 +1,53 @@
+diff --git a/src/agent/sandbox.py b/src/agent/sandbox.py
+index c6ad696..37e4256 100644
+--- a/src/agent/sandbox.py
++++ b/src/agent/sandbox.py
+@@ -8,7 +8,7 @@ from pathlib import Path
+ 
+ 
+ class ResourceLimits:
+-    def __init__(self, cpu_time: int = 60, memory_mb: int = 512, disk_mb: int = 100):
++    def __init__(self, cpu_time: int = 60, memory_mb: int = 512, disk_mb: Optional[int] = None):
+         self.cpu_time = cpu_time
+         self.memory_mb = memory_mb
+         self.disk_mb = disk_mb
+@@ -41,6 +41,9 @@ class AgentSandbox:
+             resource.setrlimit(resource.RLIMIT_CPU, (limits.cpu_time, limits.cpu_time))
+             mem_bytes = limits.memory_mb * 1024 * 1024
+             resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))
++            if limits.disk_mb is not None:
++                disk_bytes = limits.disk_mb * 1024 * 1024
++                resource.setrlimit(resource.RLIMIT_FSIZE, (disk_bytes, disk_bytes))
+         except (ValueError, resource.error) as e:
+             pass
+ 
+diff --git a/tests/test_sandbox.py b/tests/test_sandbox.py
+new file mode 100644
+index 0000000..f400004
+--- /dev/null
++++ b/tests/test_sandbox.py
+@@ -0,0 +1,24 @@
++import resource
++
++from src.agent.sandbox import AgentSandbox, ResourceLimits
++
++
++class TestAgentSandboxLimits:
++    def test_disk_limit_is_not_enabled_by_default(self):
++        limits = ResourceLimits()
++
++        assert limits.disk_mb is None
++
++    def test_apply_limits_enforces_explicit_disk_limit(self, monkeypatch):
++        calls = []
++
++        def fake_setrlimit(limit, values):
++            calls.append((limit, values))
++
++        monkeypatch.setattr(resource, "setrlimit", fake_setrlimit)
++
++        sandbox = AgentSandbox()
++        sandbox.apply_limits("agent-1", ResourceLimits(cpu_time=10, memory_mb=64, disk_mb=5))
++
++        assert (resource.RLIMIT_FSIZE, (5 * 1024 * 1024, 5 * 1024 * 1024)) in calls
++
