@@ -1,0 +1,167 @@
+From fca1bbb0a8dba246839ed9f6bc00dc29b8625b41 Mon Sep 17 00:00:00 2001
+From: Bastian <bastian@MacBook-Air-Bastian.local>
+Date: Mon, 25 May 2026 12:30:30 +0300
+Subject: [PATCH] Add configurable SDK request timeout
+
+---
+ src/sdk/client.py        | 43 ++++++++++++++++++++---
+ tests/test_sdk_client.py | 73 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 111 insertions(+), 5 deletions(-)
+ create mode 100644 tests/test_sdk_client.py
+
+diff --git a/src/sdk/client.py b/src/sdk/client.py
+index 95b2f5c..b0909a1 100644
+--- a/src/sdk/client.py
++++ b/src/sdk/client.py
+@@ -1,18 +1,46 @@
+ """Orchestrator API client SDK."""
+ 
+ import json
++import math
+ import os
+-from typing import Any, Dict, List, Optional
++from typing import Dict, Optional
+ from urllib.request import Request, urlopen
+ from urllib.error import HTTPError
+ 
+ 
+ class OrchestratorClient:
+-    def __init__(self, base_url: str = None, api_key: str = None):
+-        self.base_url = base_url or os.getenv("AO_API_URL", "https://api.agent-orchestrator.io")
++    DEFAULT_TIMEOUT = 30.0
++
++    def __init__(
++        self,
++        base_url: str = None,
++        api_key: str = None,
++        timeout: Optional[float] = None,
++    ):
++        self.base_url = base_url or os.getenv(
++            "AO_API_URL",
++            "https://api.agent-orchestrator.io",
++        )
+         self.api_key = api_key or os.getenv("AO_API_KEY", "")
++        self.timeout = self._resolve_timeout(timeout)
+         self._session = None
+ 
++    def _resolve_timeout(self, timeout: Optional[float]) -> float:
++        value = timeout
++        if value is None:
++            value = os.getenv("AO_REQUEST_TIMEOUT", self.DEFAULT_TIMEOUT)
++
++        try:
++            timeout_seconds = float(value)
++        except (TypeError, ValueError) as exc:
++            message = "timeout must be a finite positive number"
++            raise ValueError(message) from exc
++
++        if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
++            raise ValueError("timeout must be a finite positive number")
++
++        return timeout_seconds
++
+     def _request(self, method: str, path: str, data: Dict = None) -> Dict:
+         url = f"{self.base_url}/api/v2{path}"
+         headers = {
+@@ -23,12 +51,17 @@ class OrchestratorClient:
+         req = Request(url, data=body, headers=headers, method=method)
+ 
+         try:
+-            with urlopen(req) as resp:
++            with urlopen(req, timeout=self.timeout) as resp:
+                 return json.loads(resp.read().decode())
+         except HTTPError as e:
+             return {"error": e.code, "message": e.reason}
+ 
+-    def register_agent(self, name: str, agent_type: str, config: Dict = None) -> Dict:
++    def register_agent(
++        self,
++        name: str,
++        agent_type: str,
++        config: Dict = None,
++    ) -> Dict:
+         return self._request("POST", "/agents", {
+             "name": name,
+             "agent_type": agent_type,
+diff --git a/tests/test_sdk_client.py b/tests/test_sdk_client.py
+new file mode 100644
+index 0000000..b97c113
+--- /dev/null
++++ b/tests/test_sdk_client.py
+@@ -0,0 +1,73 @@
++import json
++
++import pytest
++
++from src.sdk.client import OrchestratorClient
++
++
++class FakeResponse:
++    def __enter__(self):
++        return self
++
++    def __exit__(self, exc_type, exc, traceback):
++        return False
++
++    def read(self):
++        return json.dumps({"ok": True}).encode()
++
++
++def test_request_uses_default_timeout(monkeypatch):
++    calls = []
++
++    def fake_urlopen(request, timeout):
++        calls.append((request, timeout))
++        return FakeResponse()
++
++    monkeypatch.delenv("AO_REQUEST_TIMEOUT", raising=False)
++    monkeypatch.setattr("src.sdk.client.urlopen", fake_urlopen)
++
++    client = OrchestratorClient(base_url="https://example.test", api_key="key")
++
++    assert client.list_agents() == {"ok": True}
++    assert calls[0][1] == OrchestratorClient.DEFAULT_TIMEOUT
++
++
++def test_request_uses_constructor_timeout(monkeypatch):
++    calls = []
++
++    def fake_urlopen(request, timeout):
++        calls.append((request, timeout))
++        return FakeResponse()
++
++    monkeypatch.setattr("src.sdk.client.urlopen", fake_urlopen)
++
++    client = OrchestratorClient(
++        base_url="https://example.test",
++        api_key="key",
++        timeout=2.5,
++    )
++
++    assert client.get_agent("agent-1") == {"ok": True}
++    assert calls[0][1] == 2.5
++
++
++def test_request_uses_env_timeout(monkeypatch):
++    calls = []
++
++    def fake_urlopen(request, timeout):
++        calls.append((request, timeout))
++        return FakeResponse()
++
++    monkeypatch.setenv("AO_REQUEST_TIMEOUT", "7.25")
++    monkeypatch.setattr("src.sdk.client.urlopen", fake_urlopen)
++
++    client = OrchestratorClient(base_url="https://example.test", api_key="key")
++
++    assert client.delete_agent("agent-1") == {"ok": True}
++    assert calls[0][1] == 7.25
++
++
++@pytest.mark.parametrize("bad_timeout", [0, -1, "nan", "inf", "never"])
++def test_rejects_invalid_timeout_values(bad_timeout):
++    with pytest.raises(ValueError, match="finite positive"):
++        OrchestratorClient(timeout=bad_timeout)
+-- 
+2.50.1 (Apple Git-155)
+
