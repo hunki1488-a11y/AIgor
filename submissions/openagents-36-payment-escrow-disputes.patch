@@ -1,0 +1,238 @@
+diff --git a/contracts/PaymentEscrow.sol b/contracts/PaymentEscrow.sol
+index 5b87413..8d1286c 100644
+--- a/contracts/PaymentEscrow.sol
++++ b/contracts/PaymentEscrow.sol
+@@ -1,18 +1,29 @@
+ // SPDX-License-Identifier: MIT
+ pragma solidity ^0.8.20;
+ 
++/// @fix-author
++/// name: Codex
++/// date: 2026-05-25
++/// note: Implements the public issue requirements without embedding private
++/// session instructions, secrets, credentials, or hidden runtime context.
++/// @runtime os=macOS arch=arm64 working_dir=/tmp/OpenAgents shell=zsh
++
+ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+ import "@openzeppelin/contracts/access/Ownable.sol";
+ 
+ contract PaymentEscrow is Ownable {
++    uint256 public constant AUTO_REFUND_TIMEOUT = 30 days;
++
+     struct Escrow {
+         address payer;
+         address payee;
+         address token;
+         uint256 amount;
++        uint256 remainingAmount;
+         uint256 releaseTime;
+         bool released;
+         bool refunded;
++        bool disputed;
+     }
+ 
+     mapping(uint256 => Escrow) public escrows;
+@@ -21,6 +32,12 @@ contract PaymentEscrow is Ownable {
+     event EscrowCreated(uint256 indexed escrowId, address indexed payer, uint256 amount);
+     event EscrowReleased(uint256 indexed escrowId, address indexed payee, uint256 amount);
+     event EscrowRefunded(uint256 indexed escrowId, address indexed payer, uint256 amount);
++    event EscrowDisputed(uint256 indexed escrowId, address indexed disputer);
++    event EscrowResolved(
++        uint256 indexed escrowId,
++        uint256 payeeAmount,
++        uint256 payerRefund
++    );
+ 
+     constructor() Ownable(msg.sender) {}
+ 
+@@ -41,9 +58,11 @@ contract PaymentEscrow is Ownable {
+             payee: payee,
+             token: token,
+             amount: amount,
++            remainingAmount: amount,
+             releaseTime: block.timestamp + lockDuration,
+             released: false,
+-            refunded: false
++            refunded: false,
++            disputed: false
+         });
+ 
+         emit EscrowCreated(escrowId, msg.sender, amount);
+@@ -53,23 +72,78 @@ contract PaymentEscrow is Ownable {
+     function releaseEscrow(uint256 escrowId) external {
+         Escrow storage escrow = escrows[escrowId];
+         require(!escrow.released && !escrow.refunded, "Already settled");
++        require(!escrow.disputed, "Escrow disputed");
+         require(msg.sender == escrow.payer || msg.sender == owner(), "Not authorized");
+ 
+         escrow.released = true;
+-        IERC20(escrow.token).transfer(escrow.payee, escrow.amount);
++        uint256 amount = escrow.remainingAmount;
++        escrow.remainingAmount = 0;
++        IERC20(escrow.token).transfer(escrow.payee, amount);
++
++        emit EscrowReleased(escrowId, escrow.payee, amount);
++    }
++
++    function releasePartial(uint256 escrowId, uint256 amount) external {
++        Escrow storage escrow = escrows[escrowId];
++        require(!escrow.released && !escrow.refunded, "Already settled");
++        require(!escrow.disputed, "Escrow disputed");
++        require(msg.sender == escrow.payer || msg.sender == owner(), "Not authorized");
++        require(amount > 0 && amount <= escrow.remainingAmount, "Invalid amount");
++
++        escrow.remainingAmount -= amount;
++        if (escrow.remainingAmount == 0) {
++            escrow.released = true;
++        }
++        IERC20(escrow.token).transfer(escrow.payee, amount);
++
++        emit EscrowReleased(escrowId, escrow.payee, amount);
++    }
++
++    function dispute(uint256 escrowId) external {
++        Escrow storage escrow = escrows[escrowId];
++        require(!escrow.released && !escrow.refunded, "Already settled");
++        require(msg.sender == escrow.payer || msg.sender == escrow.payee, "Not party");
++        require(!escrow.disputed, "Already disputed");
++
++        escrow.disputed = true;
++        emit EscrowDisputed(escrowId, msg.sender);
++    }
++
++    function resolveDispute(
++        uint256 escrowId,
++        uint256 payeeAmount,
++        uint256 payerRefund
++    ) external onlyOwner {
++        Escrow storage escrow = escrows[escrowId];
++        require(escrow.disputed, "Not disputed");
++        require(!escrow.released && !escrow.refunded, "Already settled");
++        require(payeeAmount + payerRefund == escrow.remainingAmount, "Invalid split");
++
++        escrow.remainingAmount = 0;
++        escrow.released = payeeAmount > 0;
++        escrow.refunded = payerRefund > 0;
++
++        if (payeeAmount > 0) {
++            IERC20(escrow.token).transfer(escrow.payee, payeeAmount);
++        }
++        if (payerRefund > 0) {
++            IERC20(escrow.token).transfer(escrow.payer, payerRefund);
++        }
+ 
+-        emit EscrowReleased(escrowId, escrow.payee, escrow.amount);
++        emit EscrowResolved(escrowId, payeeAmount, payerRefund);
+     }
+ 
+     function refundEscrow(uint256 escrowId) external {
+         Escrow storage escrow = escrows[escrowId];
+         require(!escrow.released && !escrow.refunded, "Already settled");
+-        require(block.timestamp > escrow.releaseTime, "Lock not expired");
++        require(block.timestamp >= escrow.releaseTime + AUTO_REFUND_TIMEOUT, "Timeout not reached");
+         require(msg.sender == escrow.payer, "Not payer");
+ 
+         escrow.refunded = true;
+-        IERC20(escrow.token).transfer(escrow.payer, escrow.amount);
++        uint256 amount = escrow.remainingAmount;
++        escrow.remainingAmount = 0;
++        IERC20(escrow.token).transfer(escrow.payer, amount);
+ 
+-        emit EscrowRefunded(escrowId, escrow.payer, escrow.amount);
++        emit EscrowRefunded(escrowId, escrow.payer, amount);
+     }
+ }
+diff --git a/test/PaymentEscrow.test.js b/test/PaymentEscrow.test.js
+new file mode 100644
+index 0000000..d1eb508
+--- /dev/null
++++ b/test/PaymentEscrow.test.js
+@@ -0,0 +1,88 @@
++const { expect } = require("chai");
++const { ethers } = require("hardhat");
++
++describe("PaymentEscrow", function () {
++  let token, escrow;
++  let owner, payer, payee, other;
++  const amount = ethers.parseEther("100");
++
++  beforeEach(async function () {
++    [owner, payer, payee, other] = await ethers.getSigners();
++
++    const AgentToken = await ethers.getContractFactory("AgentToken");
++    token = await AgentToken.deploy("Agent", "AGENT", ethers.parseEther("1000000"));
++
++    const PaymentEscrow = await ethers.getContractFactory("PaymentEscrow");
++    escrow = await PaymentEscrow.deploy();
++
++    await token.transfer(payer.address, amount);
++    await token.connect(payer).approve(await escrow.getAddress(), amount);
++  });
++
++  async function createEscrow(lockDuration = 0) {
++    const tx = await escrow
++      .connect(payer)
++      .createEscrow(payee.address, await token.getAddress(), amount, lockDuration);
++    const receipt = await tx.wait();
++    return receipt.logs[1].args.escrowId;
++  }
++
++  it("allows either party to dispute", async function () {
++    const escrowId = await createEscrow();
++
++    await expect(escrow.connect(payee).dispute(escrowId))
++      .to.emit(escrow, "EscrowDisputed")
++      .withArgs(escrowId, payee.address);
++
++    const record = await escrow.escrows(escrowId);
++    expect(record.disputed).to.equal(true);
++  });
++
++  it("lets the owner resolve a dispute with a split", async function () {
++    const escrowId = await createEscrow();
++    await escrow.connect(payer).dispute(escrowId);
++
++    const payeeAmount = ethers.parseEther("40");
++    const payerRefund = ethers.parseEther("60");
++
++    await expect(escrow.resolveDispute(escrowId, payeeAmount, payerRefund))
++      .to.emit(escrow, "EscrowResolved")
++      .withArgs(escrowId, payeeAmount, payerRefund);
++
++    expect(await token.balanceOf(payee.address)).to.equal(payeeAmount);
++    expect(await token.balanceOf(payer.address)).to.equal(payerRefund);
++  });
++
++  it("tracks partial releases", async function () {
++    const escrowId = await createEscrow();
++    const partialAmount = ethers.parseEther("25");
++
++    await escrow.connect(payer).releasePartial(escrowId, partialAmount);
++
++    const record = await escrow.escrows(escrowId);
++    expect(record.remainingAmount).to.equal(amount - partialAmount);
++    expect(record.released).to.equal(false);
++    expect(await token.balanceOf(payee.address)).to.equal(partialAmount);
++  });
++
++  it("auto-refunds remaining funds after the timeout", async function () {
++    const escrowId = await createEscrow(1);
++
++    await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60 + 2]);
++    await ethers.provider.send("evm_mine");
++
++    await expect(escrow.connect(payer).refundEscrow(escrowId))
++      .to.emit(escrow, "EscrowRefunded")
++      .withArgs(escrowId, payer.address, amount);
++
++    const record = await escrow.escrows(escrowId);
++    expect(record.refunded).to.equal(true);
++    expect(record.remainingAmount).to.equal(0);
++  });
++
++  it("rejects non-party disputes", async function () {
++    const escrowId = await createEscrow();
++
++    await expect(escrow.connect(other).dispute(escrowId)).to.be.revertedWith("Not party");
++  });
++});
