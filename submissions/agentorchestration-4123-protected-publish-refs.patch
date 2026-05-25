@@ -1,0 +1,342 @@
+From 55b3f61f43eaae9710b5b374b57060e93267db08 Mon Sep 17 00:00:00 2001
+From: Bastian <bastian@MacBook-Air-Bastian.local>
+Date: Mon, 25 May 2026 08:55:08 +0300
+Subject: [PATCH] Enforce protected refs before package publish
+
+---
+ .github/workflows/publish.yml   |  48 ++++++++++++
+ scripts/check_publish_ref.py    | 128 +++++++++++++++++++++++++++++++
+ tests/test_publish_ref_guard.py | 131 ++++++++++++++++++++++++++++++++
+ 3 files changed, 307 insertions(+)
+ create mode 100644 .github/workflows/publish.yml
+ create mode 100644 scripts/check_publish_ref.py
+ create mode 100644 tests/test_publish_ref_guard.py
+
+diff --git a/.github/workflows/publish.yml b/.github/workflows/publish.yml
+new file mode 100644
+index 0000000..2656382
+--- /dev/null
++++ b/.github/workflows/publish.yml
+@@ -0,0 +1,48 @@
++name: Publish Package
++
++on:
++  workflow_dispatch:
++    inputs:
++      version:
++        description: Version to publish from the current protected ref or signed tag
++        required: true
++        type: string
++  push:
++    tags:
++      - "v*.*.*"
++
++permissions:
++  contents: read
++  id-token: write
++
++jobs:
++  publish:
++    runs-on: ubuntu-latest
++
++    steps:
++      - uses: actions/checkout@v4
++        with:
++          fetch-depth: 0
++
++      - name: Set up Python
++        uses: actions/setup-python@v5
++        with:
++          python-version: "3.11"
++
++      - name: Install uv
++        uses: astral-sh/setup-uv@v3
++
++      - name: Enforce protected publish ref
++        run: python scripts/check_publish_ref.py
++
++      - name: Install dependencies
++        run: uv sync
++
++      - name: Run tests before publish
++        run: uv run pytest tests/
++
++      - name: Build package
++        run: uv build
++
++      - name: Publish to PyPI
++        uses: pypa/gh-action-pypi-publish@release/v1
+diff --git a/scripts/check_publish_ref.py b/scripts/check_publish_ref.py
+new file mode 100644
+index 0000000..0ca0b03
+--- /dev/null
++++ b/scripts/check_publish_ref.py
+@@ -0,0 +1,128 @@
++#!/usr/bin/env python3
++"""Validate that a package publish job is running from a trusted Git ref."""
++
++from __future__ import annotations
++
++import argparse
++import os
++import re
++import subprocess
++import sys
++from dataclasses import dataclass
++from typing import Callable, Mapping, Sequence
++
++
++RELEASE_TAG_RE = re.compile(r"^v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
++TRUTHY = {"1", "true", "yes", "on"}
++
++
++class PublishRefError(ValueError):
++    """Raised when the GitHub ref is not safe for package publishing."""
++
++
++@dataclass(frozen=True)
++class PublishRefContext:
++    ref: str
++    ref_type: str
++    ref_name: str
++    ref_protected: bool
++
++
++def _truthy(value: str | None) -> bool:
++    return (value or "").strip().lower() in TRUTHY
++
++
++def context_from_env(env: Mapping[str, str]) -> PublishRefContext:
++    """Build context only from GitHub-provided ref variables.
++
++    Workflow dispatch inputs are ignored so callers cannot point manual runs at
++    unreviewed refs while pretending they are release branches.
++    """
++
++    ref = env.get("GITHUB_REF", "")
++    ref_type = env.get("GITHUB_REF_TYPE", "")
++    ref_name = env.get("GITHUB_REF_NAME", "")
++
++    if not ref_name and ref.startswith("refs/heads/"):
++        ref_name = ref.removeprefix("refs/heads/")
++    elif not ref_name and ref.startswith("refs/tags/"):
++        ref_name = ref.removeprefix("refs/tags/")
++
++    return PublishRefContext(
++        ref=ref,
++        ref_type=ref_type,
++        ref_name=ref_name,
++        ref_protected=_truthy(env.get("GITHUB_REF_PROTECTED")),
++    )
++
++
++def verify_signed_tag(
++    tag_name: str,
++    runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
++) -> bool:
++    result = runner(
++        ["git", "tag", "-v", tag_name],
++        check=False,
++        text=True,
++        stdout=subprocess.PIPE,
++        stderr=subprocess.STDOUT,
++    )
++    return result.returncode == 0
++
++
++def validate_publish_ref(
++    context: PublishRefContext,
++    tag_verifier: Callable[[str], bool] = verify_signed_tag,
++) -> str:
++    if context.ref_type == "branch":
++        if not context.ref_protected:
++            raise PublishRefError(
++                "package publish blocked: branch ref is not protected"
++            )
++        return f"protected branch accepted: {context.ref_name}"
++
++    if context.ref_type == "tag":
++        if not RELEASE_TAG_RE.match(context.ref_name):
++            raise PublishRefError(
++                "package publish blocked: tag is not a release tag"
++            )
++        if not tag_verifier(context.ref_name):
++            raise PublishRefError(
++                "package publish blocked: release tag is not signed "
++                "or cannot be verified"
++            )
++        return f"signed release tag accepted: {context.ref_name}"
++
++    raise PublishRefError(
++        f"package publish blocked: unsupported ref type {context.ref_type!r}"
++    )
++
++
++def main(argv: Sequence[str] | None = None) -> int:
++    parser = argparse.ArgumentParser()
++    parser.add_argument(
++        "--skip-tag-signature-check",
++        action="store_true",
++        help="Only for local dry-runs; never use in registry publish jobs.",
++    )
++    args = parser.parse_args(argv)
++
++    context = context_from_env(os.environ)
++    verifier = (
++        (lambda _tag: True)
++        if args.skip_tag_signature_check
++        else verify_signed_tag
++    )
++
++    try:
++        message = validate_publish_ref(context, verifier)
++    except PublishRefError as exc:
++        print(str(exc), file=sys.stderr)
++        return 1
++
++    print(message)
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/tests/test_publish_ref_guard.py b/tests/test_publish_ref_guard.py
+new file mode 100644
+index 0000000..e26a81e
+--- /dev/null
++++ b/tests/test_publish_ref_guard.py
+@@ -0,0 +1,131 @@
++import importlib.util
++import pathlib
++import subprocess
++import sys
++
++
++SCRIPT = (
++    pathlib.Path(__file__).resolve().parents[1]
++    / "scripts"
++    / "check_publish_ref.py"
++)
++SPEC = importlib.util.spec_from_file_location("check_publish_ref", SCRIPT)
++guard = importlib.util.module_from_spec(SPEC)
++sys.modules[SPEC.name] = guard
++SPEC.loader.exec_module(guard)
++
++
++def test_accepts_protected_branch():
++    context = guard.context_from_env(
++        {
++            "GITHUB_REF": "refs/heads/main",
++            "GITHUB_REF_TYPE": "branch",
++            "GITHUB_REF_PROTECTED": "true",
++        }
++    )
++
++    assert (
++        guard.validate_publish_ref(context)
++        == "protected branch accepted: main"
++    )
++
++
++def test_rejects_unprotected_branch():
++    context = guard.context_from_env(
++        {
++            "GITHUB_REF": "refs/heads/feature/unreviewed",
++            "GITHUB_REF_TYPE": "branch",
++            "GITHUB_REF_PROTECTED": "false",
++        }
++    )
++
++    try:
++        guard.validate_publish_ref(context)
++    except guard.PublishRefError as exc:
++        assert "branch ref is not protected" in str(exc)
++    else:
++        raise AssertionError("unprotected branch was accepted")
++
++
++def test_manual_dispatch_input_cannot_override_github_ref():
++    context = guard.context_from_env(
++        {
++            "GITHUB_REF": "refs/heads/feature/unreviewed",
++            "GITHUB_REF_TYPE": "branch",
++            "GITHUB_REF_PROTECTED": "false",
++            "INPUT_REF": "refs/heads/main",
++        }
++    )
++
++    assert context.ref_name == "feature/unreviewed"
++    try:
++        guard.validate_publish_ref(context)
++    except guard.PublishRefError as exc:
++        assert "not protected" in str(exc)
++    else:
++        raise AssertionError("manual input overrode the GitHub ref")
++
++
++def test_accepts_signed_release_tag():
++    context = guard.context_from_env(
++        {
++            "GITHUB_REF": "refs/tags/v2.4.2",
++            "GITHUB_REF_TYPE": "tag",
++        }
++    )
++
++    assert (
++        guard.validate_publish_ref(
++            context,
++            tag_verifier=lambda tag: tag == "v2.4.2",
++        )
++        == "signed release tag accepted: v2.4.2"
++    )
++
++
++def test_rejects_unsigned_release_tag():
++    context = guard.context_from_env(
++        {
++            "GITHUB_REF": "refs/tags/v2.4.2",
++            "GITHUB_REF_TYPE": "tag",
++        }
++    )
++
++    try:
++        guard.validate_publish_ref(context, tag_verifier=lambda _tag: False)
++    except guard.PublishRefError as exc:
++        assert "not signed" in str(exc)
++    else:
++        raise AssertionError("unsigned release tag was accepted")
++
++
++def test_rejects_non_release_tag_before_signature_check():
++    checked = []
++    context = guard.context_from_env(
++        {
++            "GITHUB_REF": "refs/tags/latest",
++            "GITHUB_REF_TYPE": "tag",
++        }
++    )
++
++    try:
++        guard.validate_publish_ref(
++            context,
++            tag_verifier=lambda tag: checked.append(tag),
++        )
++    except guard.PublishRefError as exc:
++        assert "not a release tag" in str(exc)
++        assert checked == []
++    else:
++        raise AssertionError("non-release tag was accepted")
++
++
++def test_verify_signed_tag_uses_git_tag_verification():
++    calls = []
++
++    def fake_runner(args, **kwargs):
++        calls.append((args, kwargs))
++        return subprocess.CompletedProcess(args, 0, stdout="Good signature")
++
++    assert guard.verify_signed_tag("v2.4.2", runner=fake_runner)
++    assert calls[0][0] == ["git", "tag", "-v", "v2.4.2"]
+-- 
+2.50.1 (Apple Git-155)
+
