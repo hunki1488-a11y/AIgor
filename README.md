@@ -1,24 +1,24 @@
-# AI Ops Sprint: fast fixes for AI, MCP, crypto, and devtools teams
+# $100 Package-Release Rescue
 
-I help small technical teams turn repo friction into a shipped result within 24-72 hours.
+I reproduce one Node, TypeScript, MCP, or devtools release blocker and return a minimal patch or PR-ready close path in 24-48 hours.
 
-You get a concrete output, not a long consultation: a focused audit, a PR-ready patch, a test/docs/onboarding fix, or a launch/outreach cleanup sprint.
+Best fit: broken package exports or declarations, npm-pack/postinstall failures, CI release blockers, strict-consumer resolution bugs, or brittle contributor setup.
 
 ## Buy A Sprint
 
 Open an intake issue here: https://github.com/hunki1488-a11y/AIgor/issues/7
 
-Minimum scope:
+Offer ladder:
 
-- 250 USD: repo/product audit, top risks, 7-day action plan, and one PR-ready recommendation.
-- 500 USD: one focused implementation PR with tests or a verification checklist.
-- 750 USD: growth ops sprint: lead research, issue triage, external posts, and conversion cleanup.
+- 100 USD: one repo, one blocker, clean reproduction, minimal patch or patch plan, one regression check, and acceptance checklist.
+- 250-350 USD: focused implementation slice with regression coverage and handoff.
+- 500+ USD: follow-on packaging, CI, release, or onboarding work.
 
-Terms: 48-72h turnaround after scope confirmation. 50% upfront for implementation work. BTC/USDT accepted privately after scope is agreed. No production secrets required.
+Terms: the 24-48h clock starts after the `$100` payment or funded marketplace escrow. The pilot is credited toward a larger implementation slice if we continue. No production secrets required.
 
 ## Proof
 
-Confirmed payout:
+Verified small payout evidence, kept as pipeline proof rather than customer-outcome proof:
 
 - AIBTC bounty: https://aibtc.com/bounty/mpfojp3sf724109bd549
 - Submission ID: `mpivbsh80ff2b38353cc`
@@ -33,13 +33,13 @@ PR-ready sprint previews:
 - `augchatd#5` spec reconciliation: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/augchatd-5-spec-reconciliation.md
 - `github-unified-mcp#174` runtime parity: https://github.com/hunki1488-a11y/AIgor/blob/main/sprint-previews/github-unified-mcp-174-runtime-parity.md
 
-## Best Fit
+## Pilot Deliverable
 
-- MCP servers and AI-agent tooling
-- crypto/payment SDKs and bounty-driven products
-- docs/onboarding gaps that block adoption
-- test coverage, release, CI, packaging, and export-map issues
-- small product teams that need a useful PR faster than they can hire
+- failing command and clean reproduction;
+- expected versus observed behavior;
+- exact file references and root-cause notes;
+- minimal patch or PR-ready patch plan;
+- one regression check and acceptance checklist.
 
 ## Not A Fit
 
@@ -51,14 +51,13 @@ PR-ready sprint previews:
 
 ## How To Start
 
-Post one link and one desired outcome in the intake issue:
+Post one public link and one blocker in the intake issue:
 
 ```text
 Repo/product:
-Problem:
-Desired result:
-Budget: 250 / 500 / 750 USD
-Timeline:
+Failing command or symptom:
+Expected result:
+Deadline:
 ```
 
-I will reply with a narrow scope, deliverable, and payment path.
+I will confirm whether it fits the fixed `$100` pilot before payment. Do not post private code, credentials, private keys, or production secrets.
